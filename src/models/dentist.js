@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-// Dentist schema
+// The Dentist schema
 const dentistSchema = new Schema({
   id: { type: Number },
   name: { type: String },
