@@ -22,3 +22,4 @@ client.on("connect", () => {
   });
 });
 
+module.exports = client;
