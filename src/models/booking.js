@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+// Booking schema
 const bookingSchema = new Schema({
   dentistid: { type: Schema.Types.ObjectId, ref: 'dentists'},
   userid: { type: Number },
