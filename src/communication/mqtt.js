@@ -22,4 +22,16 @@ client.on("connect", () => {
   });
 });
 
+function findAllDentists() {
+  dentist.find({}, (err, dentists) => {
+    if (err) {
+      console.log(err);
+    } else {
+      const dentistsString = JSON.stringify(dentists);
+      client.publish(pubTopicList.dataDentistResponse, dentistsString);
+      console.log(dentists);
+    }
+  });
+}
+
 module.exports = client;
