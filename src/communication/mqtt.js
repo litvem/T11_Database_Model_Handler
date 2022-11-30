@@ -57,6 +57,12 @@ function findAllDentists() {
 
 function saveBooking(MQTTMessage) {
   const bookingInJson = JSON.parse(MQTTMessage);
+  if (bookingInJson.timeBegin.substr(0, 1) === "0" && bookingInJson.timeEnd.substr(0, 1) === "0") {
+      let bookingBegin = bookingInJson.timeBegin.slice(1);
+      let bookingEnd = bookingInJson.timeEnd.slice(1);
+      bookingInJson.time = `${bookingBegin}-${bookingEnd}`;
+      console.log(bookingInJson.time);
+  }
   const newBooking = new booking({
     dentistid: bookingInJson.dentistid,
     userid: bookingInJson.userid,
