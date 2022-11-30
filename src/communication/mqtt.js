@@ -57,12 +57,15 @@ function findAllDentists() {
 
 function saveBooking(MQTTMessage) {
   const bookingInJson = JSON.parse(MQTTMessage);
-  if (bookingInJson.timeBegin.substr(0, 1) === "0" && bookingInJson.timeEnd.substr(0, 1) === "0") {
-      let bookingBegin = bookingInJson.timeBegin.slice(1);
-      let bookingEnd = bookingInJson.timeEnd.slice(1);
-      bookingInJson.time = `${bookingBegin}-${bookingEnd}`;
-      console.log(bookingInJson.time);
+
+  if(bookingInJson.time.substring(0, 1) === "0") {
+    bookingInJson.time = bookingInJson.time.slice(1);
+    if(bookingInJson.time.substring(5, 6) === "0") {
+      bookingInJson.time = bookingInJson.time.substring(0, 5) + bookingInJson.time.substring(6);
+    }
   }
+  console.log(bookingInJson.time);
+
   const newBooking = new booking({
     dentistid: bookingInJson.dentistid,
     userid: bookingInJson.userid,
@@ -71,6 +74,7 @@ function saveBooking(MQTTMessage) {
     date: bookingInJson.date,
     time: bookingInJson.time,
   });
+  console.log(newBooking);
 
   const sessionId = bookingInJson.sessionid;
   newBooking.save((err) => {
