@@ -82,9 +82,12 @@ function saveBooking(MQTTMessage) {
       sendBookingConfirmation(newBooking, sessionId);
     } else {
       console.log(err);
-      // put error code here
+        SendBookingError(sessionId);
     }
   });
+  } else {
+    SendBookingError(sessionId);
+  }
 }
 
 function sendBookingConfirmation(booking, sessionId) {
@@ -94,7 +97,13 @@ function sendBookingConfirmation(booking, sessionId) {
     time: booking.time,
   };
   console.log(confirmation);
-  client.publish(pub_topics_list.bookingConfirmed + sessionId, JSON.stringify(confirmation));
+function SendBookingError(sessionId) {
+  const errorMessage = "Booking was unsuccessful";
+  client.publish(
+    pub_topics_list.bookingError + sessionId,
+    JSON.stringify(errorMessage)
+  );
+}
 }
 
 module.exports = client;
