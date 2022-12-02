@@ -55,36 +55,39 @@ function findAllDentists() {
   });
 }
 
-function saveBooking(MQTTMessage) {
+async function saveBooking(MQTTMessage) {
   const bookingInJson = JSON.parse(MQTTMessage);
+  const sessionId = bookingInJson.sessionid;
 
-  if(bookingInJson.time.substring(0, 1) === "0") {
+  if (bookingInJson.time.substring(0, 1) === "0") {
     bookingInJson.time = bookingInJson.time.slice(1);
-    if(bookingInJson.time.substring(5, 6) === "0") {
-      bookingInJson.time = bookingInJson.time.substring(0, 5) + bookingInJson.time.substring(6);
+    if (bookingInJson.time.substring(5, 6) === "0") {
+      bookingInJson.time =
+        bookingInJson.time.substring(0, 5) + bookingInJson.time.substring(6);
     }
   }
-  console.log(bookingInJson.time);
+  const freeSlotsAvailable = await checkIfAvailableTimeSlots(bookingInJson);
 
-  const newBooking = new booking({
-    dentistid: bookingInJson.dentistid,
-    userid: bookingInJson.userid,
-    requestid: bookingInJson.requestid,
-    issuance: bookingInJson.issuance,
-    date: bookingInJson.date,
-    time: bookingInJson.time,
-  });
-  console.log(newBooking);
-
-  const sessionId = bookingInJson.sessionid;
-  newBooking.save((err) => {
-    if (!err) {
-      sendBookingConfirmation(newBooking, sessionId);
-    } else {
-      console.log(err);
+  console.log(freeSlotsAvailable + ": No free slots for this time & date at this clinic");
+  if(freeSlotsAvailable) {
+    const newBooking = new booking({
+      dentistid: bookingInJson.dentistid,
+      userid: bookingInJson.userid,
+      requestid: bookingInJson.requestid,
+      issuance: bookingInJson.issuance,
+      date: bookingInJson.date,
+      time: bookingInJson.time,
+    });
+    console.log(newBooking);
+  
+    newBooking.save((err) => {
+      if (!err) {
+        sendBookingConfirmation(newBooking, sessionId);
+      } else {
+        console.log(err);
         SendBookingError(sessionId);
-    }
-  });
+      }
+    });
   } else {
     SendBookingError(sessionId);
   }
@@ -95,8 +98,16 @@ function sendBookingConfirmation(booking, sessionId) {
     userid: booking.userid,
     requestid: booking.requestid,
     time: booking.time,
+    // email: booking.email
+    // name: booking.name
   };
   console.log(confirmation);
+  client.publish(
+    pub_topics_list.bookingConfirmed + sessionId,
+    JSON.stringify(confirmation)
+  );
+}
+
 function SendBookingError(sessionId) {
   const errorMessage = "Booking was unsuccessful";
   client.publish(
@@ -104,6 +115,30 @@ function SendBookingError(sessionId) {
     JSON.stringify(errorMessage)
   );
 }
+
+async function checkIfAvailableTimeSlots(incomingBooking) {
+  let numberOfSlots = 0;
+  let numberOfBookings = 0;
+  let availableSlot = false;
+
+  const foundDentist = await dentist.findById(incomingBooking.dentistid);
+  console.log(foundDentist);
+  numberOfSlots = foundDentist.dentists;
+
+  const bookings = await booking.find({
+    dentistid: incomingBooking.dentistid,
+    date: incomingBooking.date,
+    time: incomingBooking.time,
+  });
+  numberOfBookings = bookings.length;
+  console.log(bookings);
+  console.log(numberOfBookings);
+  
+  if (numberOfBookings < numberOfSlots) {
+    availableSlot = true;
+    console.log(availableSlot + "inside checkIfAvailableTimeSlots");
+  }
+  return availableSlot;
 }
 
 module.exports = client;
