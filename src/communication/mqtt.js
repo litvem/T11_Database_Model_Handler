@@ -5,25 +5,28 @@ const booking = require("../models/booking");
 const options = {
   qos: 1,
 };
+const ERROR_MESSAGE = "Booking was unsuccessful";
 
-const pub_topics_list = {
+const PUB_TOPICS_LIST = {
   dataDentistResponse: "data/dentist/response",
   bookingConfirmed: "booking/confirmed/",
   bookingError: "booking/error/",
 };
-const sub_topics_list = {
+const SUB_TOPICS_LIST = {
   dataDentistRequest: "data/dentist/request",
   saveBooking: "booking/save",
+  cbOpen: "circuitbreak/open",
+  cbClose: "circuitbreak/close"
 };
 
 // MQTT related code was implemented with inspiration from https://www.npmjs.com/package/mqtt
 
 client.on("connect", () => {
   console.log("Connected to the Mosquitto broker");
-  client.subscribe(Object.values(sub_topics_list), options, (err) => {
+  client.subscribe(Object.values(SUB_TOPICS_LIST), options, (err) => {
     if (!err) {
       console.log(
-        `Subscribed to topics: ${sub_topics_list.dataDentistRequest} & ${sub_topics_list.saveBooking}`
+        `Subscribed to topics: ${SUB_TOPICS_LIST.dataDentistRequest}, ${SUB_TOPICS_LIST.saveBooking}, ${SUB_TOPICS_LIST.cbOpen} & ${SUB_TOPICS_LIST.cbClose}`
       );
     }
   });
@@ -31,10 +34,10 @@ client.on("connect", () => {
 
 client.on("message", (topic, message) => {
   switch (topic) {
-    case sub_topics_list.dataDentistRequest:
+    case SUB_TOPICS_LIST.dataDentistRequest:
       findAllDentists();
       break;
-    case sub_topics_list.saveBooking:
+    case SUB_TOPICS_LIST.saveBooking:
       saveBooking(message);
       break;
   }
@@ -46,7 +49,7 @@ function findAllDentists() {
       console.log(err);
     } else {
       client.publish(
-        pub_topics_list.dataDentistResponse,
+        PUB_TOPICS_LIST.dataDentistResponse,
         JSON.stringify(dentists),
         options
       );
@@ -55,29 +58,18 @@ function findAllDentists() {
   });
 }
 
+// This method will first check if there are free available at the chosen dentist clinic for the specific date & time.
+// If there is, the booking will be saved and a confirmation message published, if not, an error message will be published. 
 async function saveBooking(MQTTMessage) {
-  const bookingInJson = JSON.parse(MQTTMessage);
-  const sessionId = bookingInJson.sessionid;
+  const incomingBooking = JSON.parse(MQTTMessage);
+  const sessionId = incomingBooking.sessionid;
 
-  if (bookingInJson.time.substring(0, 1) === "0") {
-    bookingInJson.time = bookingInJson.time.slice(1);
-    if (bookingInJson.time.substring(5, 6) === "0") {
-      bookingInJson.time =
-        bookingInJson.time.substring(0, 5) + bookingInJson.time.substring(6);
-    }
-  }
-  const freeSlotsAvailable = await checkIfAvailableTimeSlots(bookingInJson);
+  incomingBooking.time = await formatTimeIntervall(incomingBooking);
+  const freeSlotsAvailable = await checkIfAvailableTimeSlots(incomingBooking);
 
-  console.log(freeSlotsAvailable + ": No free slots for this time & date at this clinic");
   if(freeSlotsAvailable) {
-    const newBooking = new booking({
-      dentistid: bookingInJson.dentistid,
-      userid: bookingInJson.userid,
-      requestid: bookingInJson.requestid,
-      issuance: bookingInJson.issuance,
-      date: bookingInJson.date,
-      time: bookingInJson.time,
-    });
+    console.log(freeSlotsAvailable + ":  Free slots are available for this time & date at this clinic");
+    const newBooking = await createBooking(incomingBooking);
     console.log(newBooking);
   
     newBooking.save((err) => {
@@ -90,39 +82,40 @@ async function saveBooking(MQTTMessage) {
     });
   } else {
     SendBookingError(sessionId);
+    console.log(freeSlotsAvailable + ":  No free slots are available for this time & date at this clinic");
   }
 }
 
+// This is a method for sending a confirmation when a booking has been successfully saved in the database
 function sendBookingConfirmation(booking, sessionId) {
   let confirmation = {
     userid: booking.userid,
     requestid: booking.requestid,
     time: booking.time,
-    // email: booking.email
     // name: booking.name
   };
   console.log(confirmation);
   client.publish(
-    pub_topics_list.bookingConfirmed + sessionId,
+    PUB_TOPICS_LIST.bookingConfirmed + sessionId,
     JSON.stringify(confirmation)
   );
 }
 
+// This is a method for sending an error message when a booking can't be successfully saved
 function SendBookingError(sessionId) {
-  const errorMessage = "Booking was unsuccessful";
   client.publish(
-    pub_topics_list.bookingError + sessionId,
-    JSON.stringify(errorMessage)
+    PUB_TOPICS_LIST.bookingError + sessionId,
+    JSON.stringify(ERROR_MESSAGE)
   );
 }
 
+// This method will double check if there are free time slots for the incoming booking's time & date at the dentist clinic
 async function checkIfAvailableTimeSlots(incomingBooking) {
   let numberOfSlots = 0;
   let numberOfBookings = 0;
-  let availableSlot = false;
+  let hasAvailableSlot = false;
 
   const foundDentist = await dentist.findById(incomingBooking.dentistid);
-  console.log(foundDentist);
   numberOfSlots = foundDentist.dentists;
 
   const bookings = await booking.find({
@@ -131,14 +124,35 @@ async function checkIfAvailableTimeSlots(incomingBooking) {
     time: incomingBooking.time,
   });
   numberOfBookings = bookings.length;
-  console.log(bookings);
   console.log(numberOfBookings);
   
   if (numberOfBookings < numberOfSlots) {
-    availableSlot = true;
-    console.log(availableSlot + "inside checkIfAvailableTimeSlots");
+    hasAvailableSlot = true;
   }
-  return availableSlot;
+  return hasAvailableSlot;
+}
+
+
+async function createBooking(incomingBooking) {
+  return new booking({
+    dentistid: incomingBooking.dentistid,
+    userid: incomingBooking.userid,
+    requestid: incomingBooking.requestid,
+    issuance: incomingBooking.issuance,
+    date: incomingBooking.date,
+    time: incomingBooking.time,
+  });
+}
+
+async function formatTimeIntervall(incomingBooking) {
+  if (incomingBooking.time.substring(0, 1) === "0") {
+    incomingBooking.time = incomingBooking.time.slice(1);
+    if (incomingBooking.time.substring(5, 6) === "0") {
+      incomingBooking.time =
+        incomingBooking.time.substring(0, 5) + incomingBooking.time.substring(6);
+    }
+  } 
+  return incomingBooking.time;
 }
 
 module.exports = client;
