@@ -6,6 +6,7 @@ const bookingSchema = new Schema({
   userid: {
     type: String, required: [true, "Email is required"]
   },
+  name: {type: String, required: [true, "Name is required"]},
   requestid: {
     type: Number,
     required: [true, "Request ID is required"],
