@@ -1,7 +1,7 @@
 # **T11 - Database Model Handler**
 
 ## **Descripton**
-
+This is a component that is part of the Dentistimo distributed system. More information about the whole system can be found [here](https://git.chalmers.se/courses/dit355/dit356-2022/t-11/t11-project).
 
 This component is connected to the Mongo database and it is the only component in this distributed system that will persist entries in it. It works in close collaboration with the [Booking validator](https://git.chalmers.se/courses/dit355/dit356-2022/t-11/t11-booking-validator), receiving bookings for dental appointments to be saved in the database, and the [Web application](https://git.chalmers.se/courses/dit355/dit356-2022/t-11/t11-web-application), publishing information about the dentist clinics. 
 
@@ -22,13 +22,12 @@ The **input data** of this component includes the bookings received by the booki
 >Example Booking request
 ```
 {
-  "userid": 12345,
+  "userid": "bob@gmail.com",
   "requestid": 13,
   "dentistid": 1,
   "issuance": 1602406766314,
   "date": "2020-12-14",
-  "name": "Peter",
-  "email": "example@mail.com"
+  "name": "Bob",
 }
 
 ```
@@ -38,9 +37,11 @@ The **output data** of this component is the information about the dentist clini
 >Example Booking confirmation
 ```
 {
-    "userid": 12345,
+    "userid": "bob@gmail.com",
     "requestid": 13,
+    "date": 2020-12-14,
     "time": 13.30,
+    "name": "Bob"
 }
 ```
 
@@ -52,7 +53,16 @@ The **output data** of this component is the information about the dentist clini
 
 >Javascript IDE<br> Some alternatives: [Visual Studio Code](https://visualstudio.microsoft.com/downloads/) , [WebStorm](https://www.jetbrains.com/webstorm/download/)
 
->MongoDB<br> [Download here](https://www.mongodb.com/docs/manual/installation/)
+>MongoDB Atlas<br> [Sign up here](https://www.mongodb.com/cloud/atlas/register?utm_content=rlsapostreg&utm_source=google&utm_campaign=search_gs_pl_evergreen_atlas_general_retarget-brand-postreg_gic-null_emea-all_ps-all_desktop_eng_lead&utm_term=&utm_medium=cpc_paid_search&utm_ad=&utm_ad_campaign_id=14412646473&adgroup=131761130372&gclid=CjwKCAiAs8acBhA1EiwAgRFdw_MoFEx8Y7bvZ8bKQR8DbT6RHJv631vx70_2J4uu3SXaXUo16lQYNxoClNQQAvD_BwE)
+
+### **Libraries**  
+- [NPM](https://www.npmjs.com/)
+- [MQTT.js](https://www.npmjs.com/package/mqtt#api)
+- [Mongoose](https://mongoosejs.com/)
+
+
+
+
 
 ### **<ins>SetUp</ins>**
 
@@ -60,10 +70,11 @@ The **output data** of this component is the information about the dentist clini
 |-------|---|
 | Clone this repository | <ins>Option 1.</ins><br> Download as a zip file<br> <ins>Option 2.</ins><br>`git clone git@git.chalmers.se:courses/dit355/dit356-2022/t-11/t11-database-model-handler.git`|
 | Open a terminal and navigate to the mosquitto root folder. On Windows the default path is: <br> `C:\Program Files\mosquitto` |  `mosquitto -c mosquitto.conf -v ` |
-|Open the repo in javascript IDE and open the terminal in the IDE. Navigate to the server folder | `npm install` |
+|Open the repo in a javascript IDE and open the terminal in the IDE.  | `npm install` |
+|Navigate to src folder|`node index.js`|
 
 ## Error-Handling
-The Mosquitto broker is normally automatically running in the background when you install it. A common error is therefore, when trying to run the `mosquitto -c mosquitto.conf -v ` command, that it will say that an instance of the broker is already running, and the process will terminate. To fix this, got to services (on Windows) and stop the Mosquitto broker from there, and try the command again. 
+The Mosquitto broker is normally automatically running in the background when you install it. A common error is therefore, when trying to run the `mosquitto -c mosquitto.conf -v ` command, that it will say that an instance of the broker is already running, and the process will terminate. To fix this (on Windows), got to services and stop the Mosquitto broker from there, and try the command again. 
 
 
 
