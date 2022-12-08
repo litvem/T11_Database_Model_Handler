@@ -3,9 +3,11 @@ const client = mqtt.connect("mqtt://localhost:1883");
 const dentist = require("../models/dentist");
 const booking = require("../models/booking");
 const options = {
-  qos: 1,
+  qosOne: 1,
+  qosTwo: 2,
 };
-const ERROR_MESSAGE = "Booking was unsuccessful";
+const SAVING_ERROR = "Booking was unsuccessful";
+const NO_FREE_SLOTS_ERROR = "No free slots available";
 
 const PUB_TOPICS_LIST = {
   dataDentistResponse: "data/dentist/response",
@@ -15,18 +17,16 @@ const PUB_TOPICS_LIST = {
 const SUB_TOPICS_LIST = {
   dataDentistRequest: "data/dentist/request",
   saveBooking: "booking/save",
-  cbOpen: "circuitbreak/open",
-  cbClose: "circuitbreak/close"
 };
 
 // MQTT related code was implemented with inspiration from https://www.npmjs.com/package/mqtt
 
 client.on("connect", () => {
   console.log("Connected to the Mosquitto broker");
-  client.subscribe(Object.values(SUB_TOPICS_LIST), options, (err) => {
+  client.subscribe(Object.values(SUB_TOPICS_LIST), (err) => {
     if (!err) {
       console.log(
-        `Subscribed to topics: ${SUB_TOPICS_LIST.dataDentistRequest}, ${SUB_TOPICS_LIST.saveBooking}, ${SUB_TOPICS_LIST.cbOpen} & ${SUB_TOPICS_LIST.cbClose}`
+        `Subscribed to topics: ${SUB_TOPICS_LIST.dataDentistRequest} & ${SUB_TOPICS_LIST.saveBooking}`
       );
     }
   });
@@ -51,15 +51,15 @@ function findAllDentists() {
       client.publish(
         PUB_TOPICS_LIST.dataDentistResponse,
         JSON.stringify(dentists),
-        options
+        options.qosOne
       );
       console.log(dentists);
     }
   });
 }
 
-// This method will first check if there are free available at the chosen dentist clinic for the specific date & time.
-// If there is, the booking will be saved and a confirmation message published, if not, an error message will be published. 
+// This method will first check if there are free available slots at the chosen dentist clinic for the specific date & time.
+// If there is, the booking will be saved and a confirmation message published, if not, an error message will be published.
 async function saveBooking(MQTTMessage) {
   const incomingBooking = JSON.parse(MQTTMessage);
   const sessionId = incomingBooking.sessionid;
@@ -67,45 +67,54 @@ async function saveBooking(MQTTMessage) {
   incomingBooking.time = await formatTimeIntervall(incomingBooking);
   const freeSlotsAvailable = await checkIfAvailableTimeSlots(incomingBooking);
 
-  if(freeSlotsAvailable) {
-    console.log(freeSlotsAvailable + ":  Free slots are available for this time & date at this clinic");
+  if (freeSlotsAvailable) {
+    console.log(
+      freeSlotsAvailable +
+        ":  Free slots are available for this time & date at this clinic"
+    );
     const newBooking = await createBooking(incomingBooking);
     console.log(newBooking);
-  
+
     newBooking.save((err) => {
       if (!err) {
         sendBookingConfirmation(newBooking, sessionId);
       } else {
         console.log(err);
-        SendBookingError(sessionId);
+        SendBookingError(sessionId, SAVING_ERROR);
       }
     });
   } else {
-    SendBookingError(sessionId);
-    console.log(freeSlotsAvailable + ":  No free slots are available for this time & date at this clinic");
+    SendBookingError(sessionId, NO_FREE_SLOTS_ERROR);
+    console.log(
+      freeSlotsAvailable +
+        ":  No free slots are available for this time & date at this clinic"
+    );
   }
 }
 
-// This is a method for sending a confirmation when a booking has been successfully saved in the database
+// This method is for sending a confirmation when a booking has been successfully saved in the database
 function sendBookingConfirmation(booking, sessionId) {
   let confirmation = {
     userid: booking.userid,
     requestid: booking.requestid,
+    date: booking.date,
     time: booking.time,
-    // name: booking.name
+    name: booking.name,
   };
   console.log(confirmation);
   client.publish(
     PUB_TOPICS_LIST.bookingConfirmed + sessionId,
-    JSON.stringify(confirmation)
+    JSON.stringify(confirmation),
+    options.qosTwo
   );
 }
 
-// This is a method for sending an error message when a booking can't be successfully saved
-function SendBookingError(sessionId) {
+// This method is for sending an error message when a booking can't be successfully saved
+function SendBookingError(sessionId, errorMessage) {
   client.publish(
     PUB_TOPICS_LIST.bookingError + sessionId,
-    JSON.stringify(ERROR_MESSAGE)
+    JSON.stringify(errorMessage),
+    options.qosTwo
   );
 }
 
@@ -125,13 +134,12 @@ async function checkIfAvailableTimeSlots(incomingBooking) {
   });
   numberOfBookings = bookings.length;
   console.log(numberOfBookings);
-  
+
   if (numberOfBookings < numberOfSlots) {
     hasAvailableSlot = true;
   }
   return hasAvailableSlot;
 }
-
 
 async function createBooking(incomingBooking) {
   return new booking({
@@ -141,6 +149,7 @@ async function createBooking(incomingBooking) {
     issuance: incomingBooking.issuance,
     date: incomingBooking.date,
     time: incomingBooking.time,
+    name: incomingBooking.name,
   });
 }
 
@@ -149,9 +158,10 @@ async function formatTimeIntervall(incomingBooking) {
     incomingBooking.time = incomingBooking.time.slice(1);
     if (incomingBooking.time.substring(5, 6) === "0") {
       incomingBooking.time =
-        incomingBooking.time.substring(0, 5) + incomingBooking.time.substring(6);
+        incomingBooking.time.substring(0, 5) +
+        incomingBooking.time.substring(6);
     }
-  } 
+  }
   return incomingBooking.time;
 }
 
