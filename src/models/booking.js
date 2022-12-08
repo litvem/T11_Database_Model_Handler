@@ -4,15 +4,15 @@ const Schema = mongoose.Schema;
 const bookingSchema = new Schema({
   dentistid: { type: Schema.Types.ObjectId, ref: "dentists", required: true },
   userid: {
-    type: Number,
-    required: [true, "User ID is required"],
+    type: String, required: [true, "Email is required"],
     validate: {
       validator: (userid) => {
-        return userid.toString().length == 5;
+        return userid.includes("@");
       },
-      message: "User ID must be five digits",
+      message: "Email must include the '@' symbol",
     },
   },
+  name: {type: String, required: [true, "Name is required"]},
   requestid: {
     type: Number,
     required: [true, "Request ID is required"],

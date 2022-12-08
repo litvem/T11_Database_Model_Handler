@@ -1,16 +1,17 @@
+require("dotenv").config({path: "../.env"});
 const mongoose = require("mongoose");
 const client = require("./communication/mqtt");
-
+const URI = process.env.MONGO_ATLAS_URI;
 
 mongoose.connect(
-    "mongodb://localhost:27017/dentistimoDB",
+    URI,
     { useNewUrlParser: true },
     (err) => {
       if (err) {
         console.error("Failed to connect to MongoDB");
         process.exit(1);
       }
-      console.log("Connected to Mongo database: dentistimoDB");
+      console.log("Connected to Mongo Atlas database: dentistimoDB");
     }
   );
 
