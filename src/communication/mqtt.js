@@ -80,11 +80,11 @@ async function saveBooking(MQTTMessage) {
         sendBookingConfirmation(newBooking, sessionId);
       } else {
         console.log(err);
-        SendBookingError(sessionId, SAVING_ERROR);
+        sendBookingError(sessionId, SAVING_ERROR);
       }
     });
   } else {
-    SendBookingError(sessionId, NO_FREE_SLOTS_ERROR);
+    sendBookingError(sessionId, NO_FREE_SLOTS_ERROR);
     console.log(
       freeSlotsAvailable +
         ":  No free slots are available for this time & date at this clinic"
@@ -110,7 +110,7 @@ function sendBookingConfirmation(booking, sessionId) {
 }
 
 // This method is for sending an error message when a booking can't be successfully saved
-function SendBookingError(sessionId, errorMessage) {
+function sendBookingError(sessionId, errorMessage) {
   client.publish(
     PUB_TOPICS_LIST.bookingError + sessionId,
     JSON.stringify(errorMessage),
