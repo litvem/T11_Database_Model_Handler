@@ -28,6 +28,7 @@ The **input data** of this component includes the bookings received by the booki
   "issuance": 1602406766314,
   "date": "2020-12-14",
   "name": "Bob",
+  "time": "13.00-13.30"
 }
 
 ```
@@ -40,8 +41,8 @@ The **output data** of this component is the information about the dentist clini
     "userid": "bob@gmail.com",
     "requestid": 13,
     "date": 2020-12-14,
-    "time": 13.30,
-    "name": "Bob"
+    "name": "Bob",
+    "time": "13.00-13.30"
 }
 ```
 
