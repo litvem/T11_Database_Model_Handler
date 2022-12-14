@@ -13,16 +13,6 @@ const bookingSchema = new Schema({
     },
   },
   name: {type: String, required: [true, "Name is required"]},
-  requestid: {
-    type: Number,
-    required: [true, "Request ID is required"],
-    validate: {
-      validator: (requestid) => {
-        return requestid.toString().length == 2;
-      },
-      message: "Request ID must be two digits",
-    },
-  },
   issuance: {
     type: Number,
     required: [true, "Issuance number is required"],
