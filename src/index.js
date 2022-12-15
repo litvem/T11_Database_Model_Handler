@@ -1,4 +1,4 @@
-require("dotenv").config({path: "../.env"});
+require("dotenv").config();
 const mongoose = require("mongoose");
 const client = require("./communication/mqtt");
 const URI = process.env.MONGO_ATLAS_URI;
