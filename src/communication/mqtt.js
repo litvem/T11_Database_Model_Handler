@@ -1,12 +1,14 @@
 const mqtt = require("mqtt");
 const client = mqtt.connect("mqtt://localhost:1883");
 const dentist = require("../models/dentist");
-const booking = require("../models/booking");
+const { createBooking } = require("../models/booking");
+const { checkIfAvailableTimeSlots, formatTimeIntervall, createConfirmation, validateThatDateIsInFuture } = require("../tools/util");
+const { saveBooking } = require("./db");
 const options = {
   qosOne: 1,
   qosTwo: 2,
 };
-const SAVING_ERROR = "Booking was unsuccessful";
+const SAVING_ERROR = "Saving the booking was unsuccessful";
 const NO_FREE_SLOTS_ERROR = "No free slots available";
 
 const PUB_TOPICS_LIST = {
@@ -38,11 +40,14 @@ client.on("message", (topic, message) => {
       findAllDentists();
       break;
     case SUB_TOPICS_LIST.saveBooking:
-      saveBooking(message);
+      handleBooking(message);
       break;
   }
 });
 
+/**
+ * This method will query the database for all dentist clinics and their info and then publish that info
+ */
 function findAllDentists() {
   dentist.find({}, (err, dentists) => {
     if (err) {
@@ -58,32 +63,33 @@ function findAllDentists() {
   });
 }
 
-// This method will first check if there are free available slots at the chosen dentist clinic for the specific date & time.
-// If there is, the booking will be saved and a confirmation message published, if not, an error message will be published.
-async function saveBooking(MQTTMessage) {
+ /**
+  * This method will first check if there are free available slots at the chosen dentist clinic for the specific date & time.
+  * If there is, the booking will be saved and a confirmation message published, if not, an error message will be published.
+  * @param MQTTMessage The payload of the message received i.e. the booking
+ */
+  async function handleBooking(MQTTMessage) {
   const incomingBooking = JSON.parse(MQTTMessage);
   const sessionId = incomingBooking.sessionid;
-  const confirmationDentistId = incomingBooking.dentistid;
-
+  const clinicId = incomingBooking.dentistid;
+  
   incomingBooking.time = await formatTimeIntervall(incomingBooking);
   const freeSlotsAvailable = await checkIfAvailableTimeSlots(incomingBooking);
+  const dateIsValid = await validateThatDateIsInFuture(incomingBooking);
 
-  if (freeSlotsAvailable) {
+  if (freeSlotsAvailable && dateIsValid) {
     console.log(
       freeSlotsAvailable +
         ":  Free slots are available for this time & date at this clinic"
     );
     const newBooking = await createBooking(incomingBooking);
-    console.log(newBooking);
-
-    newBooking.save((err) => {
-      if (!err) {
-        sendBookingConfirmation(newBooking, sessionId, confirmationDentistId);
-      } else {
-        console.log(err);
-        sendBookingError(sessionId, SAVING_ERROR);
-      }
-    });
+    try {
+      await saveBooking(newBooking);
+      await sendBookingConfirmation(newBooking, sessionId, clinicId);
+    } catch(err) {
+      console.log(err);
+      await sendBookingError(sessionId, SAVING_ERROR);
+    }
   } else {
     sendBookingError(sessionId, NO_FREE_SLOTS_ERROR);
     console.log(
@@ -93,16 +99,14 @@ async function saveBooking(MQTTMessage) {
   }
 }
 
-// This method is for sending a confirmation when a booking has been successfully saved in the database
-function sendBookingConfirmation(booking, sessionId, confirmationDentistId) {
-  let confirmation = {
-    userid: booking.userid,
-    date: booking.date,
-    time: booking.time,
-    name: booking.name,
-    sessionId: sessionId,
-    dentistId: confirmationDentistId,
-  };
+/**
+ * This method is for sending a confirmation when a booking has been successfully saved in the database
+ * @param {object} booking The booking that is being confirmed
+ * @param {Number} sessionId The session ID of the person making the booking
+ * @param {Number} clinicId The one digit number ID of the clinic. 
+ */
+async function sendBookingConfirmation(booking, sessionId, clinicId) {
+  let confirmation = await createConfirmation(booking, sessionId, clinicId)
   console.log(confirmation);
   client.publish(
     PUB_TOPICS_LIST.bookingConfirmed + sessionId,
@@ -111,70 +115,17 @@ function sendBookingConfirmation(booking, sessionId, confirmationDentistId) {
   );
 }
 
-// This method is for sending an error message when a booking can't be successfully saved
-function sendBookingError(sessionId, errorMessage) {
+/**
+ * This method is for sending an error message when a booking can't be successfully saved
+ * @param sessionId The session ID of the person making the booking
+ * @param errorMessage The error message being published to the person trying to make a booking
+ */
+ async function sendBookingError(sessionId, errorMessage) {
   client.publish(
     PUB_TOPICS_LIST.bookingError + sessionId,
     JSON.stringify(errorMessage),
     options.qosTwo
   );
-}
-
-// This method will double check if there are free time slots for the incoming booking's time & date at the dentist clinic
-async function checkIfAvailableTimeSlots(incomingBooking) {
-  let numberOfSlots = 0;
-  let numberOfBookings = 0;
-  let hasAvailableSlot = false;
-  
-
-  /**
-  The dentists have 2 ids, one (id) is the one given to us in the requirement document (kept in case the examiners would have
-  to run automatic tests) and the other (_id) is the id automatically generated by mongo.
-  */
- console.log("DENTIST ID: " + incomingBooking.dentistid)
-  const foundDentist = await dentist.findOne({id: incomingBooking.dentistid});
-  numberOfSlots = foundDentist.dentists;
-
-  const bookings = await booking.find({
-    dentistid: foundDentist._id,
-    date: incomingBooking.date,
-    time: incomingBooking.time,
-  });
-  
-  // Set the dentist id to the the actual mongo db id so that the booking can be saved 
-  incomingBooking.dentistid = foundDentist._id
-
-  numberOfBookings = bookings.length;
-  console.log(numberOfBookings);
-
-  if (numberOfBookings < numberOfSlots) {
-    hasAvailableSlot = true;
-  }
-  return hasAvailableSlot;
-}
-
-async function createBooking(incomingBooking) {
-  return new booking({
-    dentistid: incomingBooking.dentistid,
-    userid: incomingBooking.userid,
-    requestid: incomingBooking.requestid,
-    issuance: incomingBooking.issuance,
-    date: incomingBooking.date,
-    time: incomingBooking.time,
-    name: incomingBooking.name,
-  });
-}
-
-async function formatTimeIntervall(incomingBooking) {
-  if (incomingBooking.time.substring(0, 1) === "0") {
-    incomingBooking.time = incomingBooking.time.slice(1);
-    if (incomingBooking.time.substring(5, 6) === "0") {
-      incomingBooking.time =
-        incomingBooking.time.substring(0, 5) +
-        incomingBooking.time.substring(6);
-    }
-  }
-  return incomingBooking.time;
 }
 
 module.exports = client;

@@ -4,7 +4,8 @@ const Schema = mongoose.Schema;
 const bookingSchema = new Schema({
   dentistid: { type: Schema.Types.ObjectId, ref: "dentists", required: true },
   userid: {
-    type: String, required: [true, "Email is required"],
+    type: String,
+    required: [true, "Email is required"],
     validate: {
       validator: (userid) => {
         return userid.includes("@");
@@ -12,7 +13,7 @@ const bookingSchema = new Schema({
       message: "Email must include the '@' symbol",
     },
   },
-  name: {type: String, required: [true, "Name is required"]},
+  name: { type: String, required: [true, "Name is required"] },
   issuance: {
     type: Number,
     required: [true, "Issuance number is required"],
@@ -27,5 +28,21 @@ const bookingSchema = new Schema({
   time: { type: String, required: [true, "Time is required"] },
 });
 
+async function createBooking(incomingBooking) {
+  return new booking({
+    dentistid: incomingBooking.dentistid,
+    userid: incomingBooking.userid,
+    requestid: incomingBooking.requestid,
+    issuance: incomingBooking.issuance,
+    date: incomingBooking.date,
+    time: incomingBooking.time,
+    name: incomingBooking.name,
+  });
+}
+exports.createBooking = createBooking;
+
 const booking = mongoose.model("bookings", bookingSchema);
-module.exports = booking;
+module.exports = {
+  booking,
+  createBooking,
+};
