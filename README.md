@@ -71,9 +71,11 @@ The **output data** of this component is the information about the dentist clini
 | Description | Command |
 |-------|---|
 | Clone this repository | <ins>Option 1.</ins><br> Download as a zip file<br> <ins>Option 2.</ins><br>`git clone git@git.chalmers.se:courses/dit355/dit356-2022/t-11/t11-database-model-handler.git`|
+|Create a `.env` file in the root folder. Create a new environment variable called `MONGO_ATLAS_URI` inside it where you will store the Mongo Atlas cluster URI |`MONGO_ATLAS_URI`= < atlas-cluster-URI-here >|
 | Open a terminal and navigate to the mosquitto root folder. On Windows the default path is: <br> `C:\Program Files\mosquitto` |  `mosquitto -c mosquitto.conf -v ` |
 |Open the repo in a javascript IDE and open the terminal in the IDE.  | `npm install` |
 |The component is ready to be launched|`npm run dev`|
+
 
 ## Error-Handling
 The Mosquitto broker is normally automatically running in the background after you install it. A common error is therefore, when trying to run the `mosquitto -c mosquitto.conf -v ` command, that it will say that an instance of the broker is already running, and the process will terminate. To fix this (on Windows), got to services and stop the Mosquitto broker from there, and try the command again. 
