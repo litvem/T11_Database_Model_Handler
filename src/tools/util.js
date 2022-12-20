@@ -24,3 +24,17 @@ async function validateThatDateIsInFuture(incomingBooking) {
     return false;
   }
 }
+
+async function createConfirmation(booking, sessionId, clinicId) {
+  let date = booking.date.toISOString();
+  date = date.substring(0, 10);
+  console.log(date);
+  return {
+    userid: booking.userid,
+    date: date,
+    time: booking.time,
+    name: booking.name,
+    sessionId: sessionId,
+    dentistId: clinicId,
+  };
+}
