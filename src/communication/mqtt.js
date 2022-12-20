@@ -102,7 +102,7 @@ function findAllDentists() {
 /**
  * This method is for sending a confirmation when a booking has been successfully saved in the database
  * @param {object} booking The booking that is being confirmed
- * @param {Number} sessionId The session ID of the person making the booking
+ * @param {String} sessionId The session ID of the person making the booking
  * @param {Number} clinicId The one digit number ID of the clinic. 
  */
 async function sendBookingConfirmation(booking, sessionId, clinicId) {
@@ -117,8 +117,8 @@ async function sendBookingConfirmation(booking, sessionId, clinicId) {
 
 /**
  * This method is for sending an error message when a booking can't be successfully saved
- * @param sessionId The session ID of the person making the booking
- * @param errorMessage The error message being published to the person trying to make a booking
+ * @param {String} sessionId The session ID of the person making the booking
+ * @param {String} errorMessage The error message being published to the person trying to make a booking
  */
  async function sendBookingError(sessionId, errorMessage) {
   client.publish(

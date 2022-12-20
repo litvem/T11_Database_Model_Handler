@@ -81,7 +81,7 @@ async function validateThatDateIsInFuture(incomingBooking) {
  * This method creates a confirmation with the info about the booking that the user has made.
  * It also cuts the timestamp from the date since it is unnecessary
  * @param {Object} booking The booking that the confirmation pertains to  
- * @param {Number} sessionId The session ID of the user that made the booking
+ * @param {String} sessionId The session ID of the user that made the booking
  * @param {Number} clinicId The one digit Number ID of the dental clinic where the booking was made
  */
 async function createConfirmation(booking, sessionId, clinicId) {
