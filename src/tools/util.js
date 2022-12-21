@@ -61,18 +61,15 @@ async function validateThatDateIsInFuture(incomingBooking) {
   let currentDate = new Date();
 
   if (incomingDate.getFullYear() > currentDate.getFullYear()) {
-    console.log("NEW YEAR");
     return true;
   }
   if (incomingDate.getFullYear() < currentDate.getFullYear()) {
-    console.log("LAST YEAR");
     return false;
   }
   if (
     incomingDate.getMonth() == currentDate.getMonth() &&
     incomingDate.getDate() > currentDate.getDate()
   ) {
-    console.log("LATER DATE");
     return true;
   } else {
     console.log("EALRIER DATE BUT SAME MONTH");
