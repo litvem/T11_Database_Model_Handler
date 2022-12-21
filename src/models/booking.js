@@ -32,7 +32,6 @@ async function createBooking(incomingBooking) {
   return new booking({
     dentistid: incomingBooking.dentistid,
     userid: incomingBooking.userid,
-    requestid: incomingBooking.requestid,
     issuance: incomingBooking.issuance,
     date: incomingBooking.date,
     time: incomingBooking.time,

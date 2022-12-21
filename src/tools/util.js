@@ -61,18 +61,21 @@ async function validateThatDateIsInFuture(incomingBooking) {
   let currentDate = new Date();
 
   if (incomingDate.getFullYear() > currentDate.getFullYear()) {
+    console.log("NEW YEAR");
     return true;
-  } else if (incomingDate.getFullYear() == currentDate.getFullYear()) {
-    if (incomingDate.getMonth() > currentDate.getMonth()) {
-      return true;
-    } else if (incomingDate.getMonth() == currentDate.getMonth()) {
-      if (incomingDate.getDate() > currentDate.getDate()) {
-        return true;
-      } else {
-        return false;
-      }
-    }
+  }
+  if (incomingDate.getFullYear() < currentDate.getFullYear()) {
+    console.log("LAST YEAR");
+    return false;
+  }
+  if (
+    incomingDate.getMonth() == currentDate.getMonth() &&
+    incomingDate.getDate() > currentDate.getDate()
+  ) {
+    console.log("LATER DATE");
+    return true;
   } else {
+    console.log("EALRIER DATE BUT SAME MONTH");
     return false;
   }
 }
@@ -80,7 +83,7 @@ async function validateThatDateIsInFuture(incomingBooking) {
 /**
  * This method creates a confirmation with the info about the booking that the user has made.
  * It also cuts the timestamp from the date since it is unnecessary
- * @param {Object} booking The booking that the confirmation pertains to  
+ * @param {Object} booking The booking that the confirmation pertains to
  * @param {String} sessionId The session ID of the user that made the booking
  * @param {Number} clinicId The one digit Number ID of the dental clinic where the booking was made
  */
