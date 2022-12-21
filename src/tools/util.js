@@ -4,7 +4,7 @@ const { booking } = require("../models/booking");
 /**
  * This method will double check if there are free time slots for the incoming booking's time & date at the dentist clinic
  * @param incomingBooking The booking which to check the availability for
- * @returns {hasAvailableSlot} True if there are available slots and false otherwise
+ * @returns hasAvailableSlot: True if there are available slots and false otherwise
  */
 async function checkIfAvailableTimeSlots(incomingBooking) {
   let numberOfSlots = 0;
