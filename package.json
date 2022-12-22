@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node ./src/index.js"
+    "dev": "nodemon ./src/index.js"
   },
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "mongoose": "^6.7.2",
-    "mqtt": "^4.3.7"
+    "mqtt": "^4.3.7",
+    "nodemon": "^2.0.20"
   }
 }
